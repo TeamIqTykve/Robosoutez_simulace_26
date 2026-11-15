@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://b3rg3a7tuaxf1"]
+
+[ext_resource type="PackedScene" uid="uid://cxtsrobblbsoe" path="res://Assets/Models/Kostka.fbx" id="1_qvdm1"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1jm2d"]
+size = Vector3(0.100037, 0.10083, 0.101379)
+
+[node name="Node3D" type="RigidBody3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.15527e-05, 0.00012207, 0.000274658)
+shape = SubResource("BoxShape3D_1jm2d")
+
+[node name="Kostka" parent="." instance=ExtResource("1_qvdm1")]

@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3 uid="uid://7astsnctmd0m"]
+
+[ext_resource type="PackedScene" uid="uid://baao2jshi3emi" path="res://Assets/Models/ZBlock.fbx" id="1_ftb7i"]
+[ext_resource type="PhysicsMaterial" uid="uid://cca4hpqotpp6v" path="res://Materials/Block.tres" id="1_ymses"]
+[ext_resource type="Shape3D" uid="uid://dogf1po1p8egp" path="res://Collision shapes/2Block.tres" id="2_52gdv"]
+
+[node name="ZBlock" type="RigidBody3D"]
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+mass = 0.06
+physics_material_override = ExtResource("1_ymses")
+
+[node name="ZBlock" parent="." instance=ExtResource("1_ftb7i")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.0198861, 0.0204625, 0.0195979)
+shape = ExtResource("2_52gdv")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0195979, 0.0204625, -0.0201743)
+shape = ExtResource("2_52gdv")

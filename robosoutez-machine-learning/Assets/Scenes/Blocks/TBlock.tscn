@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3 uid="uid://cd3ada6jqr42a"]
+
+[ext_resource type="PackedScene" uid="uid://yafpfp8y2xpe" path="res://Assets/Models/TBlock.fbx" id="1_4h4ek"]
+[ext_resource type="PhysicsMaterial" uid="uid://cca4hpqotpp6v" path="res://Materials/Block.tres" id="1_70qtk"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_r0f5n"]
+size = Vector3(0.119659, 0.0407715, 0.0404053)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_min8o"]
+size = Vector3(0.0397034, 0.0400391, 0.0398254)
+
+[node name="TBlock" type="RigidBody3D"]
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+mass = 0.06
+physics_material_override = ExtResource("1_70qtk")
+
+[node name="TBlock" parent="." instance=ExtResource("1_4h4ek")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.000198364, 0.0201416, -0.0120239)
+shape = SubResource("BoxShape3D_r0f5n")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.52588e-05, 0.0200195, 0.0278778)
+shape = SubResource("BoxShape3D_min8o")

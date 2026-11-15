@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3 uid="uid://diryoxcjr56ja"]
+
+[ext_resource type="PackedScene" uid="uid://c5otnlpqxsp6p" path="res://Assets/Models/LineBlock.fbx" id="1_veqf5"]
+[ext_resource type="PhysicsMaterial" uid="uid://cca4hpqotpp6v" path="res://Materials/Block.tres" id="1_yq8wi"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_hqd6m"]
+size = Vector3(0.159912, 0.0403442, 0.0396576)
+
+[node name="LineBlock" type="RigidBody3D"]
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+mass = 0.06
+physics_material_override = ExtResource("1_yq8wi")
+
+[node name="LineBlock" parent="." instance=ExtResource("1_veqf5")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.000654429, 0.0197178, -6.86646e-05)
+shape = SubResource("BoxShape3D_hqd6m")

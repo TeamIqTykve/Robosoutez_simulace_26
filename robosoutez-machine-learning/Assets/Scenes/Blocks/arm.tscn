@@ -1,0 +1,27 @@
+[gd_scene load_steps=5 format=3 uid="uid://dvy2iduyjlmt0"]
+
+[ext_resource type="PackedScene" uid="uid://cyayipqqveech" path="res://Assets/Models/RobotHand.fbx" id="1_4fxbi"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_a1t2t"]
+rough = true
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_3f8kn"]
+size = Vector3(0.00280762, 0.0603638, 0.0746155)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_le2iv"]
+size = Vector3(0.120483, 0.0604248, 0.00680542)
+
+[node name="HandR" type="RigidBody3D"]
+physics_material_override = SubResource("PhysicsMaterial_a1t2t")
+can_sleep = false
+continuous_cd = true
+
+[node name="RobotHand" parent="." instance=ExtResource("1_4fxbi")]
+
+[node name="Hand1" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.10287, 0.00210571, -0.00563529)
+shape = SubResource("BoxShape3D_3f8kn")
+
+[node name="Hand2" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.160783, 0.0022583, 0.0341413)
+shape = SubResource("BoxShape3D_le2iv")

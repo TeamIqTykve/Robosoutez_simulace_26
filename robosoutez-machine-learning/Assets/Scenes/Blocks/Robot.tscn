@@ -1,0 +1,35 @@
+[gd_scene load_steps=6 format=3 uid="uid://b1upkfsypqsy4"]
+
+[ext_resource type="Script" path="res://Assets/Scripts/Robot.cs" id="1_h344o"]
+[ext_resource type="Shape3D" uid="uid://b5p752f13j5ud" path="res://Collision shapes/RobotBodyShape.tres" id="2_chedb"]
+[ext_resource type="PackedScene" uid="uid://cv1lnutijgbkq" path="res://Assets/Models/RobotBody.fbx" id="3_qqtan"]
+[ext_resource type="Script" path="res://Assets/Scripts/CommandQueue.cs" id="4_tw7sv"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_ha6ay"]
+friction = 0.01
+
+[node name="Robot" type="RigidBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.052, 0)
+mass = 5.0
+physics_material_override = SubResource("PhysicsMaterial_ha6ay")
+can_sleep = false
+continuous_cd = true
+script = ExtResource("1_h344o")
+
+[node name="RobotBody" parent="." instance=ExtResource("3_qqtan")]
+
+[node name="Body" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.000139624, -1.52588e-05, 0.000122074)
+shape = ExtResource("2_chedb")
+
+[node name="ColorSensor" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.042, 0, 0)
+collision_mask = 8
+collide_with_areas = true
+
+[node name="CommandQueue" type="Node" parent="."]
+script = ExtResource("4_tw7sv")
+
+[node name="WallSensor" type="RayCast3D" parent="."]
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0.0722803, 0, 0)
+target_position = Vector3(0, -0.01, 0)

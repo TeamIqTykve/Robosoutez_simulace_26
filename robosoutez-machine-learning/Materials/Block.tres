@@ -1,0 +1,5 @@
+[gd_resource type="PhysicsMaterial" format=3 uid="uid://cca4hpqotpp6v"]
+
+[resource]
+resource_name = "Block"
+friction = 0.3

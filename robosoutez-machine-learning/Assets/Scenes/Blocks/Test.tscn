@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://b2l1h2woahtw1"]
+
+[ext_resource type="PackedScene" uid="uid://dh0jsdm1evwvf" path="res://Assets/Models/Test.glb" id="1_jhs3k"]
+
+[node name="Test" type="RigidBody3D"]
+
+[node name="Test" parent="." instance=ExtResource("1_jhs3k")]

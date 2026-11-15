@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://6cgs3xxa33j2"]
+
+[ext_resource type="PhysicsMaterial" uid="uid://cca4hpqotpp6v" path="res://Materials/Block.tres" id="1_f3v33"]
+[ext_resource type="PackedScene" uid="uid://ds58w1wmdv178" path="res://Assets/Models/SBlock.fbx" id="1_vxdbc"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1pte6"]
+size = Vector3(0.0801544, 0.0405273, 0.0804214)
+
+[node name="SBlock" type="RigidBody3D"]
+axis_lock_linear_y = true
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+mass = 0.06
+physics_material_override = ExtResource("1_f3v33")
+can_sleep = false
+continuous_cd = true
+
+[node name="SBlock" parent="." instance=ExtResource("1_vxdbc")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.86646e-05, 0.0197754, -6.48499e-05)
+shape = SubResource("BoxShape3D_1pte6")

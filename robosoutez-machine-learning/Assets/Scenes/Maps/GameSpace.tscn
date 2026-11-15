@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://du4qtxpshdw37"]
+
+[ext_resource type="PackedScene" uid="uid://pfgmbewyi6ld" path="res://Assets/Models/HraciDeska-col.glb" id="1_n410v"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_r8nox"]
+friction = 0.7
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_jpusu"]
+resource_name = "bottom"
+size = Vector3(2.0936701, 0.462692, 2.077508)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_sq0fy"]
+size = Vector3(0.09832572, 0.28582758, 2.11597)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kcdsd"]
+size = Vector3(2.733589, 0.32611108, 0.105404615)
+
+[node name="GameSpace" type="Node3D" unique_id=1755533773]
+
+[node name="hraci_deska" parent="." unique_id=911015424 instance=ExtResource("1_n410v")]
+transform = Transform3D(0.015, 0, 0, 0, 0.015, 0, 0, 0, 0.015, -0.0043382645, 0.003368616, 0.005081162)
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=1057934436]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0310953, 0.0756894, -0.010968)
+physics_material_override = SubResource("PhysicsMaterial_r8nox")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=1456129909]
+transform = Transform3D(-4.3711385e-08, 0, 1.1872832, 0, 0.39500332, 0, -0.99999994, 0, -5.1897796e-08, 0.01607873, -0.20316312, 0.040972054)
+shape = SubResource("BoxShape3D_jpusu")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="Ground" unique_id=26580914]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2752546, -0.024220668, 0.00012207031)
+shape = SubResource("BoxShape3D_sq0fy")
+
+[node name="CollisionShape3D3" type="CollisionShape3D" parent="Ground" unique_id=1989312885]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3291632, -0.0509033, 0.00012207031)
+shape = SubResource("BoxShape3D_sq0fy")
+
+[node name="CollisionShape3D4" type="CollisionShape3D" parent="Ground" unique_id=1717986582]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0021057092, -0.0497437, 1.0025109)
+shape = SubResource("BoxShape3D_kcdsd")
+
+[node name="CollisionShape3D5" type="CollisionShape3D" parent="Ground" unique_id=1074024048]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.01410285, 0.03579423, -0.9639461)
+shape = SubResource("BoxShape3D_kcdsd")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1406701636]
+transform = Transform3D(1, 0, 0, 0, 0.559294, 0.828969, 0, -0.828969, 0.559294, 0, 1.08298, 0.746094)

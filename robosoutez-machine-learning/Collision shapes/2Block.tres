@@ -1,0 +1,5 @@
+[gd_resource type="BoxShape3D" format=3 uid="uid://dogf1po1p8egp"]
+
+[resource]
+resource_name = "2Block"
+size = Vector3(0.041488647, 0.041374207, 0.10035324)
