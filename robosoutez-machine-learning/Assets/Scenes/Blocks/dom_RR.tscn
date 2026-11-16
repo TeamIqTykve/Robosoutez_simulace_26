@@ -8,6 +8,9 @@ albedo_color = Color(1, 0, 0, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_qr7op"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_i0dsr"]
+albedo_color = Color(1, 0, 0, 1)
+
 [node name="LBlock" type="RigidBody3D" unique_id=695376385]
 axis_lock_angular_x = true
 axis_lock_angular_z = true
@@ -25,7 +28,7 @@ skeleton = NodePath("../..")
 
 [node name="MeshInstance3D2" type="MeshInstance3D" parent="CSGCombiner3D" unique_id=1181381313]
 transform = Transform3D(0.32, 0, 0, 0, 0.21, 0, 0, 0, 0.48, 0, 0, 0.24)
-material_override = SubResource("StandardMaterial3D_p4r84")
+material_override = SubResource("StandardMaterial3D_i0dsr")
 mesh = SubResource("BoxMesh_qr7op")
 skeleton = NodePath("../..")
 

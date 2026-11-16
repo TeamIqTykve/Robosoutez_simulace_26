@@ -2,12 +2,8 @@
 
 [ext_resource type="PackedScene" uid="uid://du4qtxpshdw37" path="res://Assets/Scenes/Maps/GameSpace.tscn" id="1_wd1tf"]
 [ext_resource type="PackedScene" uid="uid://b1upkfsypqsy4" path="res://Assets/Scenes/Blocks/Robot.tscn" id="2_ag3t2"]
-[ext_resource type="PackedScene" uid="uid://6cgs3xxa33j2" path="res://Assets/Scenes/Blocks/SBlock.tscn" id="3_bvcig"]
+[ext_resource type="PackedScene" uid="uid://b18mnn7hfgic1" path="res://Assets/Scenes/Blocks/dom_YY.tscn" id="4_wcura"]
 [ext_resource type="PackedScene" uid="uid://dvy2iduyjlmt0" path="res://Assets/Scenes/Blocks/arm.tscn" id="5_n02em"]
-[ext_resource type="PackedScene" uid="uid://diryoxcjr56ja" path="res://Assets/Scenes/Blocks/LineBlock.tscn" id="5_yavfr"]
-[ext_resource type="PackedScene" uid="uid://7astsnctmd0m" path="res://Assets/Scenes/Blocks/ZBlock.tscn" id="6_f51n2"]
-[ext_resource type="PackedScene" uid="uid://d2plcabns1602" path="res://Assets/Scenes/Blocks/dom_RR.tscn" id="7_peeoa"]
-[ext_resource type="PackedScene" uid="uid://cd3ada6jqr42a" path="res://Assets/Scenes/Blocks/TBlock.tscn" id="8_2yjsn"]
 [ext_resource type="PackedScene" uid="uid://db2arxt8qo85s" path="res://Global/McpServer.tscn" id="9_gyq04"]
 [ext_resource type="Script" uid="uid://476uopcblcnj" path="res://Global/GameField.cs" id="10_bbwwu"]
 
@@ -59,64 +55,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 [node name="Blocks" type="Node3D" parent="." unique_id=748451743]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0.415392, 0.00524965, -0.578)
 
-[node name="SBlock" parent="Blocks" unique_id=627430821 instance=ExtResource("3_bvcig")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.60253, 0, -1.12757)
-
-[node name="SBlock2" parent="Blocks" unique_id=1394689052 instance=ExtResource("3_bvcig")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.410329, 0, -1.12757)
-
-[node name="SBlock3" parent="Blocks" unique_id=1596402186 instance=ExtResource("3_bvcig")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.216447, 0, -1.12757)
-
-[node name="SBlock4" parent="Blocks" unique_id=1191871830 instance=ExtResource("3_bvcig")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.0242453, 0, -1.12757)
-
-[node name="LineBlock" parent="Blocks" unique_id=1891863223 instance=ExtResource("5_yavfr")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.602839, 0, -0.847322)
-
-[node name="LineBlock2" parent="Blocks" unique_id=1503129869 instance=ExtResource("5_yavfr")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.408956, 0, -0.847322)
-
-[node name="LineBlock3" parent="Blocks" unique_id=138135481 instance=ExtResource("5_yavfr")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.217876, 0, -0.847322)
-
-[node name="LineBlock4" parent="Blocks" unique_id=1768901081 instance=ExtResource("5_yavfr")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.0245538, 0, -0.847322)
-
-[node name="ZBlock" parent="Blocks" unique_id=1766888948 instance=ExtResource("6_f51n2")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.58939, 0, -0.586392)
-
-[node name="ZBlock2" parent="Blocks" unique_id=461493872 instance=ExtResource("6_f51n2")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.396068, 0, -0.586392)
-
-[node name="ZBlock3" parent="Blocks" unique_id=594157890 instance=ExtResource("6_f51n2")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.201065, 0, -0.586392)
-
-[node name="ZBlock4" parent="Blocks" unique_id=1373901455 instance=ExtResource("6_f51n2")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.00998446, 0, -0.586392)
-
-[node name="LBlock" parent="Blocks" unique_id=2114612110 instance=ExtResource("7_peeoa")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.586883, 0, -0.262571)
-
-[node name="LBlock3" parent="Blocks" unique_id=751070390 instance=ExtResource("7_peeoa")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.198844, 0, -0.262571)
-
-[node name="LBlock2" parent="Blocks" unique_id=1269051411 instance=ExtResource("7_peeoa")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3901, 0, -0.281944)
-
-[node name="LBlock4" parent="Blocks" unique_id=406603088 instance=ExtResource("7_peeoa")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.30721715, 0.15642379, -0.34769958)
-
-[node name="TBlock" parent="Blocks" unique_id=1561296807 instance=ExtResource("8_2yjsn")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.587853, 0, 0.0188)
-
-[node name="TBlock3" parent="Blocks" unique_id=343710849 instance=ExtResource("8_2yjsn")]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0.202231, 0, 0.0188)
-
-[node name="TBlock2" parent="Blocks" unique_id=1065224001 instance=ExtResource("8_2yjsn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.385238, 0, 0.00115287)
-
-[node name="TBlock4" parent="Blocks" unique_id=1135280282 instance=ExtResource("8_2yjsn")]
+[node name="LBlock" parent="Blocks" unique_id=695376385 instance=ExtResource("4_wcura")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.44465494, 0.06996797, -1.1819837)
 
 [node name="McpServer" parent="." unique_id=762794604 instance=ExtResource("9_gyq04")]
 

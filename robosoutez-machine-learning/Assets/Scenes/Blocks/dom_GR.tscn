@@ -1,0 +1,37 @@
+[gd_scene format=3 uid="uid://bqdkx1wjb2tar"]
+
+[ext_resource type="PhysicsMaterial" uid="uid://cca4hpqotpp6v" path="res://Materials/Block.tres" id="1_pk4vb"]
+[ext_resource type="Shape3D" uid="uid://dogf1po1p8egp" path="res://Collision shapes/2Block.tres" id="2_e1bpj"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1ouk0"]
+albedo_color = Color(0, 1, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_qr7op"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_p4r84"]
+albedo_color = Color(1, 0, 0, 1)
+
+[node name="LBlock" type="RigidBody3D" unique_id=695376385]
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+mass = 0.06
+physics_material_override = ExtResource("1_pk4vb")
+
+[node name="CSGCombiner3D" type="CSGCombiner3D" parent="." unique_id=1218384867]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CSGCombiner3D" unique_id=1541200633]
+transform = Transform3D(0.32, 0, 0, 0, 0.21, 0, 0, 0, 0.48, 0, 0, -0.24)
+material_override = SubResource("StandardMaterial3D_1ouk0")
+mesh = SubResource("BoxMesh_qr7op")
+skeleton = NodePath("../..")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="CSGCombiner3D" unique_id=1181381313]
+transform = Transform3D(0.32, 0, 0, 0, 0.21, 0, 0, 0, 0.48, 0, 0, 0.24)
+material_override = SubResource("StandardMaterial3D_p4r84")
+mesh = SubResource("BoxMesh_qr7op")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=840957625]
+transform = Transform3D(0.76, 0, 0, 0, 0.5, 0, 0, 0, 0.96, 0.00012175948, -8.487608e-05, -1.647952e-05)
+shape = ExtResource("2_e1bpj")
