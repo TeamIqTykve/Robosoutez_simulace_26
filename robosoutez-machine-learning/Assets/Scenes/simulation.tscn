@@ -117,8 +117,8 @@ script = ExtResource("10_bbwwu")
 
 [node name="Wall" type="StaticBody3D" parent="." unique_id=888304158]
 transform = Transform3D(0.825, 0, 0, 0, 0.825, 0, 0, 0, 0.825, 0, 0.004885055, 0)
-collision_layer = 8
-collision_mask = 8
+collision_layer = 9
+collision_mask = 9
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall" unique_id=891546871]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0053254585, -0.0014308793, 0.007977215)
