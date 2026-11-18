@@ -40,6 +40,7 @@ transform = Transform3D(-4.3711387e-10, 0, 0.01, 0, 0.01, 0, -0.01, 0, -4.371138
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.4731161, 0, 0.703112)
 
 [node name="Robot" parent="RobotPivot" unique_id=1841607053 node_paths=PackedStringArray("_handjoint") instance=ExtResource("2_ag3t2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6531252, 0.058924377, 0.4599022)
 axis_lock_angular_x = true
 axis_lock_angular_z = true
 _handjoint = NodePath("../HingeJoint3D")
@@ -57,10 +58,10 @@ motor/target_velocity = 0.0
 motor/max_impulse = 10.0
 
 [node name="HandR" parent="RobotPivot" unique_id=658059399 instance=ExtResource("5_n02em")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9193094, 0.05, 0.3409037)
 
 [node name="Domino" type="Node3D" parent="." unique_id=748451743]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.038308233, 0)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.0519273, 0)
 
 [node name="dom_YY" parent="Domino" unique_id=695376385 instance=ExtResource("4_wcura")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -0.708)
@@ -121,7 +122,7 @@ collision_layer = 9
 collision_mask = 9
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Wall" unique_id=891546871]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0053254585, -0.0014308793, 0.007977215)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005, 0, 0.008)
 shape = SubResource("BoxShape3D_2qk1o")
 
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="Wall" unique_id=1465188663]
