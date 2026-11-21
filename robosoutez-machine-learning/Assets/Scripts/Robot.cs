@@ -1,4 +1,4 @@
-   using Godot;
+using Godot;
 using RoboSoutezMachineLearning.Global;
 using System;
 using System.ComponentModel;
@@ -7,7 +7,7 @@ using System.Reflection.Metadata;
 using System.Security.Cryptography.X509Certificates;
 using static System.Reflection.Metadata.BlobBuilder;
 
-public partial class Robot : RigidBody3D, IRobot
+public partial class Robot : StaticBody3D, IRobot
 {
 	private CommandQueue _commandQueue;
 	[Export] private HingeJoint3D _handjoint;
@@ -136,7 +136,7 @@ public partial class Robot : RigidBody3D, IRobot
 		Vector3 fwdXZ = new Vector3(fwd.X, 0, fwd.Z).Normalized();
 
 		Vector3 V = fwdXZ * (float)v;
-		LinearVelocity = V;
+		LinearVelocity = V;t
 		AngularVelocity = new Vector3(AngularVelocity.X, (float)-om, AngularVelocity.Z);
 
 		switch (_robotState)

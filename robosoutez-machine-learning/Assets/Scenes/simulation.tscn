@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://pfgmbewyi6ld" path="res://Assets/Models/HraciDeska-col.glb" id="1_2qk1o"]
 [ext_resource type="PackedScene" uid="uid://b1upkfsypqsy4" path="res://Assets/Scenes/Blocks/Robot.tscn" id="2_ag3t2"]
+[ext_resource type="Script" uid="uid://dr7l3tkrhk2wh" path="res://Assets/Scripts/RobotSim.cs" id="2_n28uv"]
 [ext_resource type="PackedScene" uid="uid://62uxl7i8mlj6" path="res://Assets/Scenes/Blocks/hand.tscn" id="3_2qk1o"]
 [ext_resource type="PackedScene" uid="uid://b18mnn7hfgic1" path="res://Assets/Scenes/Blocks/dom_YY.tscn" id="4_wcura"]
 [ext_resource type="PackedScene" uid="uid://c36nne3aoymdb" path="res://Assets/Scenes/Blocks/magazine.tscn" id="4_wruf3"]
@@ -38,16 +39,17 @@ transform = Transform3D(-4.3711385e-08, -1, -4.3711385e-08, 0, -4.371139e-08, 0.
 transform = Transform3D(-4.3711387e-10, 0, 0.01, 0, 0.01, 0, -0.01, 0, -4.3711387e-10, 0, 0, 0)
 
 [node name="RobotPivot" type="Node3D" parent="." unique_id=1773288917]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0, 0)
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.061042428, 0)
+script = ExtResource("2_n28uv")
 
 [node name="Robot" parent="RobotPivot" unique_id=1841607053 node_paths=PackedStringArray("_handjoint") instance=ExtResource("2_ag3t2")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.062258735, 0, -2.7214164e-09)
 axis_lock_angular_x = true
 axis_lock_angular_z = true
 _handjoint = NodePath("../HingeJoint3D_R")
 
 [node name="HandR" parent="RobotPivot" unique_id=1629981173 instance=ExtResource("3_2qk1o")]
-transform = Transform3D(1, -2.1175824e-22, 4.3711392e-08, 1.9106846e-15, 1, -4.3711402e-08, -4.3711392e-08, 4.3711402e-08, 1, 0.231, 0, 0.066)
+transform = Transform3D(1, -2.1175824e-22, 4.3711392e-08, 1.9106846e-15, 1, -4.3711402e-08, -4.3711392e-08, 4.3711402e-08, 1, 0.16932292, -0.02279216, 0.066)
 
 [node name="HingeJoint3D_R" type="HingeJoint3D" parent="RobotPivot" unique_id=1166147158]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.231, 0, 0.066)
@@ -61,7 +63,7 @@ motor/target_velocity = 0.0
 motor/max_impulse = 10.0
 
 [node name="HandL" parent="RobotPivot" unique_id=841391494 instance=ExtResource("3_2qk1o")]
-transform = Transform3D(1, -2.1175824e-22, 4.3711392e-08, 1.9106846e-15, 1, -4.3711402e-08, -4.3711392e-08, 4.3711402e-08, 1, 0.231, 0, -0.066)
+transform = Transform3D(1, -2.1175824e-22, 4.3711392e-08, 1.9106846e-15, 1, -4.3711402e-08, -4.3711392e-08, 4.3711402e-08, 1, 0.16780344, -0.023000002, -0.066)
 
 [node name="HingeJoint3D_L" type="HingeJoint3D" parent="RobotPivot" unique_id=1733762036]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0.231, 0, -0.066)
@@ -75,6 +77,7 @@ motor/target_velocity = 0.0
 motor/max_impulse = 10.0
 
 [node name="magazine" parent="RobotPivot" unique_id=1841314388 instance=ExtResource("4_wruf3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.062, 0, 0)
 
 [node name="Domino" type="Node3D" parent="." unique_id=748451743]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.0519273, 0)
