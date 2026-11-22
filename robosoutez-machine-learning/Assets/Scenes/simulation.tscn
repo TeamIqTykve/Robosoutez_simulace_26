@@ -10,9 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://b7twmy88w3onq" path="res://Assets/Scenes/Blocks/dom_YG.tscn" id="6_wruf3"]
 [ext_resource type="PackedScene" uid="uid://ckuton7g1s4k0" path="res://Assets/Scenes/Blocks/dom_GB.tscn" id="7_n28uv"]
 [ext_resource type="PackedScene" uid="uid://dtrx7lq4gdqjb" path="res://Assets/Scenes/Blocks/dom_YB.tscn" id="8_k4sk3"]
-[ext_resource type="PackedScene" uid="uid://db2arxt8qo85s" path="res://Global/McpServer.tscn" id="9_gyq04"]
 [ext_resource type="PackedScene" uid="uid://bqdkx1wjb2tar" path="res://Assets/Scenes/Blocks/dom_GR.tscn" id="9_ra01r"]
-[ext_resource type="Script" uid="uid://476uopcblcnj" path="res://Global/GameField.cs" id="10_bbwwu"]
 [ext_resource type="PackedScene" uid="uid://d2plcabns1602" path="res://Assets/Scenes/Blocks/dom_RR.tscn" id="10_mnrp6"]
 [ext_resource type="PackedScene" uid="uid://6xc7y5gtrd3t" path="res://Assets/Scenes/Blocks/dom_YR.tscn" id="11_sn8g2"]
 [ext_resource type="PackedScene" uid="uid://8ub38snakfrd" path="res://Assets/Scenes/Blocks/dom_BR.tscn" id="12_n4hom"]
@@ -38,15 +36,19 @@ transform = Transform3D(-4.3711385e-08, -1, -4.3711385e-08, 0, -4.371139e-08, 0.
 [node name="hraci_deska" parent="." unique_id=1039641148 instance=ExtResource("1_2qk1o")]
 transform = Transform3D(-4.3711387e-10, 0, 0.01, 0, 0.01, 0, -0.01, 0, -4.3711387e-10, 0, 0, 0)
 
-[node name="RobotPivot" type="Node3D" parent="." unique_id=1773288917]
+[node name="RobotPivot" type="Node3D" parent="." unique_id=1773288917 node_paths=PackedStringArray("RobotPivot", "HandL", "HandR", "Magazine")]
 transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 0.061042428, 0)
 script = ExtResource("2_n28uv")
+RobotPivot = NodePath(".")
+HandL = NodePath("HandL")
+HandR = NodePath("HandR")
+Magazine = NodePath("magazine")
 
-[node name="Robot" parent="RobotPivot" unique_id=1841607053 node_paths=PackedStringArray("_handjoint") instance=ExtResource("2_ag3t2")]
+[node name="Robot" parent="RobotPivot" unique_id=1841607053 instance=ExtResource("2_ag3t2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.062258735, 0, -2.7214164e-09)
 axis_lock_angular_x = true
 axis_lock_angular_z = true
-_handjoint = NodePath("../HingeJoint3D_R")
+script = null
 
 [node name="HandR" parent="RobotPivot" unique_id=1629981173 instance=ExtResource("3_2qk1o")]
 transform = Transform3D(1, -2.1175824e-22, 4.3711392e-08, 1.9106846e-15, 1, -4.3711402e-08, -4.3711392e-08, 4.3711402e-08, 1, 0.16932292, -0.02279216, 0.066)
@@ -130,10 +132,7 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -0.4
 [node name="dom_YY" parent="Domino" unique_id=695376385 instance=ExtResource("4_wcura")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -0.708)
 
-[node name="McpServer" parent="." unique_id=762794604 instance=ExtResource("9_gyq04")]
-
 [node name="GameField" type="Node3D" parent="." unique_id=1832586518]
-script = ExtResource("10_bbwwu")
 
 [node name="Wall" type="StaticBody3D" parent="." unique_id=888304158]
 transform = Transform3D(0.825, 0, 0, 0, 0.825, 0, 0, 0, 0.825, 0, 0.004885055, 0)
