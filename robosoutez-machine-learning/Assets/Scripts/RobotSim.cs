@@ -10,13 +10,11 @@ public partial class RobotSim : Node3D
 	[Export] public StaticBody3D HandL { get; set; }
 	[Export] public StaticBody3D HandR { get; set; }
 	[Export] public StaticBody3D Magazine { get; set; }
-
 	[Export] public float BoardMoveScale = 0.001f;
 	[Export] public float TurnSpeedDegPerSec = 180f;
 	[Export] public float ArmMoveSpeedDegPerSec = 180f;
 	[Export] public float MagazineMoveSpeedPerSec = 0.08f;
 	[Export] public float DefaultForwardVel = 500f;
-	[Export] public float DefaultRotateAngle = 90f;
 	[Export] public float DefaultObstacleDistance = 150f;
 
 	// Stavy dle main.py
@@ -31,7 +29,6 @@ public partial class RobotSim : Node3D
 	private enum DriveMode { Idle, Forward, ReverseUnload, Rotate, UntilObstacle }
 	private DriveMode _driveMode = DriveMode.Idle;
 
-	// Místo LinearVelocity / AngularVelocity držíme stavové rychlosti a zbývající úhel/čas
 	private float _currentSpeed = 0f;
 	private float _targetSpeed = 0f;
 	private float _remainingDuration = 0f;
@@ -39,6 +36,10 @@ public partial class RobotSim : Node3D
 	private float _rotateSign = 1f;
 	private float _obstacleDistanceMm = 150f;
 	private float _simulatedObstacleDistMm = 1000f;
+
+	// Sledování plynulého otáčení při držení A / D
+	private float _heldRotateDeg = 0f;
+	private float _heldRotateSign = 0f;
 
 	public sealed class SimStep
 	{
@@ -76,7 +77,7 @@ public partial class RobotSim : Node3D
 	public override void _Ready()
 	{
 		ApplyInstantPoseFromFlags();
-		GD.Print("Ovládání: W/S = vpřed/vzad, Q/E = rotate(-90/90), J/L/K = ruce (CCW/CW/neutrál), Z/X = magazín (vlevo/vpravo), U = unload_blocks, O = run_until_obstacle, Space = stop | P = vypsat, Enter = přehrát, C = vymazat");
+		GD.Print("Ovládání: W/S = vpřed/vzad (okamžité zastavení), A/D = plynulé otáčení podle doby držení, J/L/K = ruce (CCW/CW/neutrál), Z/X = magazín (vlevo/vpravo), U = unload_blocks, O = run_until_obstacle, Space = stop | P = vypsat, Enter = přehrát, C = vymazat");
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -87,8 +88,6 @@ public partial class RobotSim : Node3D
 		{
 			switch (keyEvent.Keycode)
 			{
-				case Key.A: TriggerRotate(-DefaultRotateAngle); break;
-				case Key.D: TriggerRotate(DefaultRotateAngle); break;
 				case Key.J: TriggerArmRotateBlockCcw(); break;
 				case Key.L: TriggerArmRotateBlockCw(); break;
 				case Key.K: TriggerArmRotateNeutral(); break;
@@ -113,22 +112,7 @@ public partial class RobotSim : Node3D
 
 		if (!_isPlayingSequence)
 		{
-			if (Input.IsKeyPressed(Key.W))
-			{
-				_driveMode = DriveMode.Forward;
-				_targetSpeed = DefaultForwardVel;
-				_remainingDuration = 0.2f;
-			}
-			else if (Input.IsKeyPressed(Key.S))
-			{
-				_driveMode = DriveMode.ReverseUnload;
-				_targetSpeed = -400f;
-				_remainingDuration = 0.2f;
-			}
-			else if (_remainingDuration <= 0f && (_driveMode == DriveMode.Forward || _driveMode == DriveMode.ReverseUnload))
-			{
-				_targetSpeed = 0f;
-			}
+			HandleManualHoldMovement(dt);
 		}
 		else
 		{
@@ -137,6 +121,73 @@ public partial class RobotSim : Node3D
 
 		UpdateStaticBodyRobotMovement(dt);
 		UpdateHandsAndMagazine(dt);
+	}
+
+	private void HandleManualHoldMovement(float dt)
+	{
+		// 1. Jízda vpřed / vzad – okamžitý rozjezd i okamžité zastavení po puštění klávesy
+		bool wPressed = Input.IsKeyPressed(Key.W);
+		bool sPressed = Input.IsKeyPressed(Key.S);
+
+		if (wPressed && !sPressed)
+		{
+			_driveMode = DriveMode.Forward;
+			_targetSpeed = 250F;
+			_currentSpeed = 250f;
+			_remainingDuration = 0f;
+		}
+		else if (sPressed && !wPressed)
+		{
+			_driveMode = DriveMode.ReverseUnload;
+			_targetSpeed = -250f;
+			_currentSpeed = -250f;
+			_remainingDuration = 0f;
+		}
+		else if (_driveMode == DriveMode.Forward || _driveMode == DriveMode.ReverseUnload)
+		{
+			_targetSpeed = 0f;
+			_currentSpeed = 0f;
+			_remainingDuration = 0f;
+			_driveMode = DriveMode.Idle;
+		}
+
+		// 2. Otáčení po dobu držení A (doleva) / D (doprava)
+		bool aPressed = Input.IsKeyPressed(Key.A);
+		bool dPressed = Input.IsKeyPressed(Key.D);
+
+		if (aPressed ^ dPressed)
+		{
+			float sign = dPressed ? -1f : 1f; // V Godotu kladné Y otáčí doleva (A), záporné doprava (D)
+			float stepDeg = TurnSpeedDegPerSec * dt;
+
+			Node3D targetNode = RobotPivot ?? this;
+			targetNode.RotateY(Mathf.DegToRad(stepDeg * sign));
+
+			if (_heldRotateSign != sign && MathF.Abs(_heldRotateDeg) > 0.01f)
+			{
+				FlushHeldRotationRecord();
+			}
+
+			_heldRotateSign = sign;
+			// Do rotate(angle) v main.py ukládáme kladný úhel pro otočení doprava (D) a záporný pro doleva (A)
+			_heldRotateDeg += stepDeg * (dPressed ? 1f : -1f);
+			_driveMode = DriveMode.Idle;
+		}
+		else if (MathF.Abs(_heldRotateDeg) > 0.01f)
+		{
+			FlushHeldRotationRecord();
+		}
+	}
+
+	private void FlushHeldRotationRecord()
+	{
+		double roundedAngle = Math.Round(_heldRotateDeg, 1);
+		if (Math.Abs(roundedAngle) >= 0.1)
+		{
+			LogAndRecord("rotate", roundedAngle, 0, record: true);
+		}
+		_heldRotateDeg = 0f;
+		_heldRotateSign = 0f;
 	}
 
 	private void UpdateStaticBodyRobotMovement(float dt)
@@ -167,25 +218,26 @@ public partial class RobotSim : Node3D
 			}
 			_currentSpeed = 150f;
 		}
-		else
+		else if (_isPlayingSequence)
 		{
-			float accel = 600f * dt;
-			if (_currentSpeed < _targetSpeed)
-				_currentSpeed = MathF.Min(_targetSpeed, _currentSpeed + accel);
-			else if (_currentSpeed > _targetSpeed)
-				_currentSpeed = MathF.Max(_targetSpeed, _currentSpeed - accel);
+			_currentSpeed = _targetSpeed;
 
 			if (_remainingDuration > 0f)
 			{
 				_remainingDuration -= dt;
-				if (_remainingDuration <= 0f && !_isPlayingSequence)
+				if (_remainingDuration <= 0f)
 				{
+					_remainingDuration = 0f;
 					_targetSpeed = 0f;
+					_currentSpeed = 0f;
+					_driveMode = DriveMode.Idle;
 				}
 			}
 		}
 
-		Vector3 forwardDir = -targetNode.GlobalTransform.Basis.Z.Normalized();
+		if (MathF.Abs(_currentSpeed) <= 0.0001f) return;
+
+		Vector3 forwardDir = targetNode.GlobalTransform.Basis.X.Normalized();
 		Vector3 displacement = forwardDir * (_currentSpeed * BoardMoveScale) * dt;
 
 		if (targetNode is StaticBody3D body3D)
@@ -202,10 +254,16 @@ public partial class RobotSim : Node3D
 
 	public void TriggerStop(bool record = true)
 	{
+		if (MathF.Abs(_heldRotateDeg) > 0.01f)
+		{
+			FlushHeldRotationRecord();
+		}
+
 		_driveMode = DriveMode.Idle;
 		_targetSpeed = 0f;
 		_currentSpeed = 0f;
 		_remainingDuration = 0f;
+		_remainingAngleDeg = 0f;
 		LogAndRecord("stop", 0, 0, record);
 	}
 
@@ -223,6 +281,7 @@ public partial class RobotSim : Node3D
 	{
 		_driveMode = DriveMode.Forward;
 		_targetSpeed = (float)vel;
+		_currentSpeed = (float)vel;
 		_remainingDuration = (float)durationSec;
 		LogAndRecord("run_forward", vel, durationSec, record);
 	}
@@ -232,6 +291,7 @@ public partial class RobotSim : Node3D
 		_driveMode = DriveMode.UntilObstacle;
 		_obstacleDistanceMm = (float)distanceMm;
 		_targetSpeed = 150f;
+		_currentSpeed = 150f;
 		LogAndRecord("run_until_obstacle", distanceMm, 0, record);
 	}
 
@@ -277,6 +337,7 @@ public partial class RobotSim : Node3D
 		TriggerArmRotateNeutral(record: false);
 		_driveMode = DriveMode.ReverseUnload;
 		_targetSpeed = -400f;
+		_currentSpeed = -400f;
 		_remainingDuration = (float)unloadDurationSec;
 		LogAndRecord("unload_blocks", unloadDurationSec, 0, record);
 	}
@@ -343,6 +404,11 @@ public partial class RobotSim : Node3D
 
 	private void StartPlayback(IEnumerable<SimStep> steps)
 	{
+		if (MathF.Abs(_heldRotateDeg) > 0.01f)
+		{
+			FlushHeldRotationRecord();
+		}
+
 		_playbackQueue.Clear();
 		_playbackQueue.AddRange(steps);
 		_isPlayingSequence = _playbackQueue.Count > 0;
@@ -372,7 +438,7 @@ public partial class RobotSim : Node3D
 				break;
 			case "rotate":
 				TriggerRotate(step.Param1, record: false);
-				_stepWaitTimer = 1.0f;
+				_stepWaitTimer = MathF.Abs((float)step.Param1) / MathF.Max(1f, TurnSpeedDegPerSec);
 				break;
 			case "run_until_obstacle":
 				TriggerRunUntilObstacle(step.Param1, record: false);
