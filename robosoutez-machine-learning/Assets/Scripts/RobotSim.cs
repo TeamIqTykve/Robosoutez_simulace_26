@@ -29,6 +29,8 @@ public partial class RobotSim : Node3D
 	[Export(PropertyHint.Layers3DPhysics)] public uint RobotMask = 4;
 	/// <summary>Kostku, která se dostala do robota, vždy vytlačit ve směru pohybu robota (fyzika by ji jinak mohla protlačit skrz tenké díly).</summary>
 	[Export] public bool ForcePushDominoes = true;
+	/// <summary>Maximální rychlost kostky [m/s] – pojistka proti "vystřelení" kostky fyzikou při zaklínění.</summary>
+	[Export] public float MaxDominoSpeed = 0.8f;
 
 	// Stavy dle main.py
 	public int IsCW { get; private set; } = 1;
@@ -82,6 +84,16 @@ public partial class RobotSim : Node3D
 	private readonly Dictionary<CollisionObject3D, Transform3D> _robotBodyPrevTransforms = new();
 	private readonly List<CollisionObject3D> _robotBodies = new();
 	private readonly PhysicsShapeQueryParameters3D _pushQuery = new();
+
+	// Poloha robota na začátku kroku – při zaseknutí kostky se krok vrátí
+	private Transform3D _pivotPrev;
+	private Vector3 _handLPrevRot, _handRPrevRot, _magazinePrevPos;
+	private float _heldRotateDegPrev;
+	private bool _stuckReported = false;
+	[Flags] private enum StuckSource { None = 0, Drive = 1, Hands = 2, Magazine = 4 }
+	private StuckSource _squeezeStuck = StuckSource.None;
+	private const float PushStep = 0.001f;
+	private const float PushTolerance = 0.004f;
 
 	public sealed class SimStep
 	{
@@ -160,7 +172,8 @@ public partial class RobotSim : Node3D
 	{
 		float dt = (float)delta;
 		UpdatePinnedDominoes();
-		foreach (CollisionObject3D b in _robotBodies) _robotBodyPrevTransforms[b] = b.GlobalTransform;
+		CaptureFrameStartPose();
+		_squeezeStuck = StuckSource.None;
 
 		if (!_isPlayingSequence)
 		{
@@ -173,7 +186,21 @@ public partial class RobotSim : Node3D
 
 		UpdateStaticBodyRobotMovement(dt);
 		UpdateHandsAndMagazine(dt);
-		ForcePushDominoesOutOfRobot(dt);
+
+		ClampDominoSpeeds();
+
+		if (_squeezeStuck != StuckSource.None)
+		{
+			HandleStuckDomino("opřená o mantinel", _squeezeStuck);
+		}
+		else if (!ForcePushDominoesOutOfRobot(dt, out string stuckDomino))
+		{
+			HandleStuckDomino(stuckDomino);
+		}
+		else
+		{
+			_stuckReported = false;
+		}
 	}
 
 	private void HandleManualHoldMovement(float dt)
@@ -295,7 +322,7 @@ public partial class RobotSim : Node3D
 		Vector3 displacement = forwardDir * (_currentSpeed * BoardMoveScale) * dt;
 
 		Vector3 start = targetNode.GlobalPosition;
-		float travelled = MoveBlockedByWalls(t => targetNode.GlobalPosition = start + displacement * t);
+		float travelled = MoveBlockedByWalls(t => targetNode.GlobalPosition = start + displacement * t, StuckSource.Drive);
 
 		// Robot narazil do mantinelu – zastavíme jízdu (ruční W/S se znovu rozjede při držení klávesy)
 		if (travelled < 1f && _driveMode != DriveMode.Forward && _driveMode != DriveMode.ReverseUnload)
@@ -353,7 +380,7 @@ public partial class RobotSim : Node3D
 	/// Provede pohyb (apply(t), t∈[0,1]) tak, aby robot neprošel mantinelem.
 	/// Vrací, jaký podíl pohybu se skutečně provedl.
 	/// </summary>
-	private float MoveBlockedByWalls(Action<float> apply)
+	private float MoveBlockedByWalls(Action<float> apply, StuckSource source)
 	{
 		if (_robotShapes.Count == 0) { apply(1f); return 1f; }
 
@@ -373,6 +400,10 @@ public partial class RobotSim : Node3D
 
 		apply(1f);
 		if (Allowed()) return 1f;
+
+		// Pohyb by rozmáčkl kostku opřenou o mantinel → funkce se zastaví (na konci kroku)
+		if (SqueezeDepth() > startSqueeze + SqueezeTolerance)
+			_squeezeStuck |= source;
 
 		// Půlení intervalu – najdeme nejdelší možný posun bez průniku
 		float lo = 0f, hi = 1f;
@@ -407,8 +438,10 @@ public partial class RobotSim : Node3D
 						Body = body,
 						Node = cs,
 						InflatedShape = new BoxShape3D { Size = size + Vector3.One * (2f * PinnedMargin) },
-						// Mírně nižší, aby dotaz nezachytil podlahu
-						PushShape = new BoxShape3D { Size = new Vector3(size.X, MathF.Max(0.001f, size.Y - 0.004f), size.Z) }
+						// Mírně menší: nižší, aby dotaz nezachytil podlahu, a užší o povolený průnik
+						// fyzikálních kontaktů (kostka opřená o mantinel ho o ~2 mm protíná)
+						PushShape = new BoxShape3D { Size = new Vector3(
+							MathF.Max(0.001f, size.X - 0.005f), MathF.Max(0.001f, size.Y - 0.004f), MathF.Max(0.001f, size.Z - 0.005f)) }
 					});
 				}
 			}
@@ -469,72 +502,187 @@ public partial class RobotSim : Node3D
 		_squeezeQuery.Exclude = _nonPinnedDominoRids;
 	}
 
-	private bool DominoOverlapsMask(DominoInfo d, Vector3 position, uint mask)
+	private void ClampDominoSpeeds()
+	{
+		if (MaxDominoSpeed <= 0f) return;
+		foreach (DominoInfo d in _dominoes)
+		{
+			Vector3 v = d.Body.LinearVelocity;
+			if (v.Length() > MaxDominoSpeed) d.Body.LinearVelocity = v.Normalized() * MaxDominoSpeed;
+			Vector3 w = d.Body.AngularVelocity;
+			float maxW = MaxDominoSpeed / 0.03f; // ~ obvodová rychlost rohu kostky
+			if (w.Length() > maxW) d.Body.AngularVelocity = w.Normalized() * maxW;
+		}
+	}
+
+	private void CaptureFrameStartPose()
+	{
+		foreach (CollisionObject3D b in _robotBodies) _robotBodyPrevTransforms[b] = b.GlobalTransform;
+		_pivotPrev = (RobotPivot ?? this).GlobalTransform;
+		if (HandL != null) _handLPrevRot = HandL.Rotation;
+		if (HandR != null) _handRPrevRot = HandR.Rotation;
+		if (Magazine != null) _magazinePrevPos = Magazine.Position;
+		_heldRotateDegPrev = _heldRotateDeg;
+	}
+
+	/// <summary>Kostka nemá kam uhnout → vrátí celý krok robota a zastaví funkci, která ji tlačila.</summary>
+	private void HandleStuckDomino(string dominoName, StuckSource forced = StuckSource.None)
+	{
+		Node3D pivot = RobotPivot ?? this;
+		bool driveMoved = forced.HasFlag(StuckSource.Drive) || !pivot.GlobalTransform.IsEqualApprox(_pivotPrev);
+		bool handsMoved = forced.HasFlag(StuckSource.Hands) || (HandL != null && !HandL.Rotation.IsEqualApprox(_handLPrevRot)) ||
+		                  (HandR != null && !HandR.Rotation.IsEqualApprox(_handRPrevRot));
+		bool magazineMoved = forced.HasFlag(StuckSource.Magazine) || Magazine != null && !Magazine.Position.IsEqualApprox(_magazinePrevPos);
+
+		// Vrácení kroku
+		pivot.GlobalTransform = _pivotPrev;
+		if (HandL != null) HandL.Rotation = _handLPrevRot;
+		if (HandR != null) HandR.Rotation = _handRPrevRot;
+		if (Magazine != null) Magazine.Position = _magazinePrevPos;
+
+		var stopped = new List<string>();
+		if (driveMoved)
+		{
+			// Ruční otáčení A/D: neotočený úhel se nesmí zapsat do záznamu
+			if (MathF.Sign(_heldRotateDeg) == MathF.Sign(_heldRotateDegPrev) && MathF.Abs(_heldRotateDeg) >= MathF.Abs(_heldRotateDegPrev))
+				_heldRotateDeg = _heldRotateDegPrev;
+			_driveMode = DriveMode.Idle;
+			_targetSpeed = 0f;
+			_currentSpeed = 0f;
+			_remainingDuration = 0f;
+			_remainingAngleDeg = 0f;
+			stopped.Add("jízda/otáčení");
+		}
+		if (handsMoved)
+		{
+			StaticBody3D hand = HandL ?? HandR;
+			_targetHandYawDeg = Mathf.RadToDeg(hand.Rotation.Y);
+			stopped.Add("ruce");
+		}
+		if (magazineMoved)
+		{
+			_targetMagazineZ = Magazine.Position.Z;
+			stopped.Add("zásobník");
+		}
+
+		if (!_stuckReported)
+		{
+			GD.Print($"[SIM] Kostka {dominoName} se zasekla (nemá kam uhnout) – zastaveno: {(stopped.Count > 0 ? string.Join(", ", stopped) : "nic")}");
+			_stuckReported = true;
+		}
+	}
+
+	/// <summary>Díly robota a mantinely, které kostka v dané poloze protíná.</summary>
+	private List<CollisionObject3D> OverlappingBodies(DominoInfo d, Vector3 position)
 	{
 		Transform3D gt = d.Node.GlobalTransform;
 		_pushQuery.Shape = d.PushShape;
 		_pushQuery.Transform = new Transform3D(gt.Basis.Orthonormalized(), position + (gt.Origin - d.Body.GlobalPosition));
-		_pushQuery.CollisionMask = mask;
+		_pushQuery.CollisionMask = RobotMask | BoardWallMask;
 		_pushQuery.Margin = 0f;
-		return GetWorld3D().DirectSpaceState.IntersectShape(_pushQuery, 1).Count > 0;
+		var result = new List<CollisionObject3D>();
+		foreach (var hit in GetWorld3D().DirectSpaceState.IntersectShape(_pushQuery, 16))
+			if (hit["collider"].AsGodotObject() is CollisionObject3D body) result.Add(body);
+		return result;
+	}
+
+	private Vector3 MotionAt(CollisionObject3D body, Vector3 point)
+	{
+		if (!_robotBodyPrevTransforms.TryGetValue(body, out Transform3D prev)) return Vector3.Zero;
+		Vector3 m = point - prev * (body.GlobalTransform.AffineInverse() * point);
+		m.Y = 0f;
+		return m;
 	}
 
 	/// <summary>
-	/// Kostka, která po pohybu robota zůstala uvnitř robota, se posune ve směru pohybu dílu,
-	/// který ji zasáhl, právě tak daleko, aby z robota vyjela. Do mantinelu se nikdy nevytlačí.
+	/// Kostka, která po kroku zůstala uvnitř robota, se posune ve směru pohybu dílu, který ji tlačí,
+	/// právě tak daleko, aby z robota vyjela. Pokud jí v cestě stojí mantinel nebo jiný díl robota,
+	/// který se s ní nehýbe, je zaseknutá → vrací false (a nic neposouvá).
 	/// </summary>
-	private void ForcePushDominoesOutOfRobot(float dt)
+	private bool ForcePushDominoesOutOfRobot(float dt, out string stuckDomino)
 	{
-		if (!ForcePushDominoes || _dominoes.Count == 0 || dt <= 0f) return;
-		var space = GetWorld3D().DirectSpaceState;
+		stuckDomino = null;
+		if (!ForcePushDominoes || _dominoes.Count == 0 || dt <= 0f) return true;
+
+		var pushes = new List<(DominoInfo d, Vector3 target, Vector3 dir, float speed)>();
 
 		foreach (DominoInfo d in _dominoes)
 		{
 			if (!d.Node.IsInsideTree()) continue;
 			Vector3 pos = d.Body.GlobalPosition;
-			Transform3D gt = d.Node.GlobalTransform;
-			_pushQuery.Shape = d.PushShape;
-			_pushQuery.Transform = new Transform3D(gt.Basis.Orthonormalized(), gt.Origin);
-			_pushQuery.CollisionMask = RobotMask;
-			_pushQuery.Margin = 0f;
-			var hits = space.IntersectShape(_pushQuery, 4);
-			if (hits.Count == 0) continue;
+			Vector3 center = d.Node.GlobalTransform.Origin;
+			List<CollisionObject3D> startHits = OverlappingBodies(d, pos);
+			if (startHits.Count == 0) continue;
 
-			// Pohyb dílu robota v místě kostky během tohoto kroku (největší ze zasažených dílů)
+			// Díl, který kostku tlačí = zasažený díl s největším posunem v místě kostky
 			Vector3 motion = Vector3.Zero;
-			foreach (var hit in hits)
+			foreach (CollisionObject3D body in startHits)
 			{
-				if (hit["collider"].AsGodotObject() is not CollisionObject3D body) continue;
-				if (!_robotBodyPrevTransforms.TryGetValue(body, out Transform3D prev)) continue;
-				Vector3 prevPoint = prev * (body.GlobalTransform.AffineInverse() * gt.Origin);
-				Vector3 m = gt.Origin - prevPoint;
-				m.Y = 0f;
+				Vector3 m = MotionAt(body, center);
 				if (m.LengthSquared() > motion.LengthSquared()) motion = m;
 			}
 			if (motion.LengthSquared() < 1e-10f) continue; // robot stojí – kolizi vyřeší fyzika
-
 			Vector3 dir = motion.Normalized();
-			// Dostatečná vzdálenost, aby kostka vyjela i z hlubokého průniku
-			float maxDist = motion.Length() + d.PushShape.Size.Length();
-			if (DominoOverlapsMask(d, pos + dir * maxDist, RobotMask)) continue;
+			float motionLen = motion.Length();
 
-			float lo = 0f, hi = maxDist;
-			for (int i = 0; i < 12; i++)
+			// "Tlačí" všechny díly, které se v místě kostky hýbou zhruba stejně; ostatní jsou překážky
+			bool IsPusher(CollisionObject3D body) => MotionAt(body, center).Dot(dir) > 0.5f * motionLen;
+			// Překážky, ve kterých kostka už na začátku byla (nepřesné kolize), ignorujeme
+			var ignored = new HashSet<CollisionObject3D>();
+			foreach (CollisionObject3D body in startHits)
+				if (!IsPusher(body) && _robotBodies.Contains(body)) ignored.Add(body);
+
+			// Díl smí kostku posunout nejvýš o to, o kolik se sám v jejím místě (rohy u otáčení) posunul.
+			// Hlubší průnik vznikl dřív (ne tímto krokem) – ten nechá fyzika, žádné přeskakování.
+			float maxDist = motionLen;
+			Vector3 half = d.PushShape.Size * 0.5f;
+			Basis db = d.Node.GlobalTransform.Basis.Orthonormalized();
+			foreach (CollisionObject3D body in startHits)
+			{
+				if (!IsPusher(body)) continue;
+				for (int cx = -1; cx <= 1; cx += 2)
+				for (int cz = -1; cz <= 1; cz += 2)
+					maxDist = MathF.Max(maxDist, MotionAt(body, center + db * new Vector3(cx * half.X, 0f, cz * half.Z)).Length());
+			}
+			maxDist += PushTolerance;
+			float freeAt = -1f, lastBlocked = 0f;
+			for (float dist = PushStep; dist <= maxDist + 1e-6f; dist += PushStep)
+			{
+				bool touchesPusher = false, blocked = false;
+				foreach (CollisionObject3D body in OverlappingBodies(d, pos + dir * dist))
+				{
+					if (ignored.Contains(body)) continue;
+					if (_robotBodies.Contains(body) && IsPusher(body)) touchesPusher = true;
+					else blocked = true; // mantinel nebo jiný díl robota
+				}
+				if (blocked) { stuckDomino = d.Body.Name; return false; }
+				if (!touchesPusher) { freeAt = dist; break; }
+				lastBlocked = dist;
+			}
+			if (freeAt < 0f) continue; // kostka byla v robotu už před tímto krokem
+
+			// Zpřesnění hranice
+			float lo = lastBlocked, hi = freeAt;
+			for (int i = 0; i < 6; i++)
 			{
 				float mid = 0.5f * (lo + hi);
-				if (DominoOverlapsMask(d, pos + dir * mid, RobotMask)) lo = mid; else hi = mid;
+				bool inPusher = false;
+				foreach (CollisionObject3D body in OverlappingBodies(d, pos + dir * mid))
+					if (!ignored.Contains(body) && _robotBodies.Contains(body) && IsPusher(body)) inPusher = true;
+				if (inPusher) lo = mid; else hi = mid;
 			}
-			Vector3 target = pos + dir * (hi + 0.0005f);
+			pushes.Add((d, pos + dir * (hi + 0.0005f), dir, motionLen / dt));
+		}
 
-			// Nikdy ne do mantinelu – zaklínění řeší blokace pohybu robota
-			if (DominoOverlapsMask(d, target, BoardWallMask)) continue;
-
+		foreach (var (d, target, dir, _) in pushes)
+		{
 			d.Body.GlobalPosition = target;
+			// Rychlost nepřidáváme (kostka by po zastavení robota ujížděla dál), jen odebereme složku zpět do robota
 			Vector3 v = d.Body.LinearVelocity;
 			float along = v.Dot(dir);
-			float robotSpeed = motion.Length() / dt;
-			if (along < robotSpeed) d.Body.LinearVelocity = v + dir * (robotSpeed - along);
+			if (along < 0f) d.Body.LinearVelocity = v - dir * along;
 		}
+		return true;
 	}
 
 	/// <summary>Součet průniků robota do zaklíněných kostek [m].</summary>
@@ -563,7 +711,7 @@ public partial class RobotSim : Node3D
 		Node3D targetNode = RobotPivot ?? this;
 		Basis startBasis = targetNode.GlobalBasis;
 		return MoveBlockedByWalls(t =>
-			targetNode.GlobalBasis = new Basis(Vector3.Up, Mathf.DegToRad(deg * t)) * startBasis);
+			targetNode.GlobalBasis = new Basis(Vector3.Up, Mathf.DegToRad(deg * t)) * startBasis, StuckSource.Drive);
 	}
 
 	private float MeasureObstacleDistanceMm(Node3D targetNode)
@@ -680,7 +828,7 @@ public partial class RobotSim : Node3D
 			if (hand == null) continue;
 			float startY = hand.Rotation.Y;
 			float nextY = Mathf.MoveToward(startY, targetRad, maxStepRad);
-			MoveBlockedByWalls(t => hand.Rotation = new Vector3(hand.Rotation.X, Mathf.Lerp(startY, nextY, t), hand.Rotation.Z));
+			MoveBlockedByWalls(t => hand.Rotation = new Vector3(hand.Rotation.X, Mathf.Lerp(startY, nextY, t), hand.Rotation.Z), StuckSource.Hands);
 			if (MathF.Abs(hand.Rotation.Y - targetRad) > 0.001f) handsReachedTarget = false;
 		}
 
@@ -689,7 +837,7 @@ public partial class RobotSim : Node3D
 			float clampedTargetZ = Mathf.Clamp(_targetMagazineZ, -0.032f, 0.032f);
 			float startZ = Magazine.Position.Z;
 			float nextZ = Mathf.MoveToward(startZ, clampedTargetZ, MagazineMoveSpeedPerSec * dt);
-			MoveBlockedByWalls(t => Magazine.Position = new Vector3(Magazine.Position.X, Magazine.Position.Y, Mathf.Lerp(startZ, nextZ, t)));
+			MoveBlockedByWalls(t => Magazine.Position = new Vector3(Magazine.Position.X, Magazine.Position.Y, Mathf.Lerp(startZ, nextZ, t)), StuckSource.Magazine);
 		}
 	}
 
