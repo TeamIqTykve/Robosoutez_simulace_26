@@ -3,30 +3,31 @@
 [ext_resource type="PackedScene" uid="uid://dy1vacxpr30r8" path="res://Assets/Models/part4_base.fbx" id="1_k532p"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_plrnn"]
-size = Vector3(0.08201599, 0.050354004, 0.0029907227)
+size = Vector3(0.102016, 0.050354004, 0.0029907227)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_bqubg"]
-size = Vector3(0.08154297, 0.04925537, 0.017730713)
+size = Vector3(0.101543, 0.04925537, 0.017730713)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_tc0ol"]
 size = Vector3(0.0028381348, 0.0501709, 0.11135864)
 
 [node name="magazine" type="AnimatableBody3D" unique_id=1477730004]
 sync_to_physics = false
+collision_layer = 5
 
 [node name="magazine_model" parent="." unique_id=2055682990 instance=ExtResource("1_k532p")]
-transform = Transform3D(-4.371139e-08, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, 0, 0, 0)
+transform = Transform3D(-5.438898e-08, 1.244275, -5.438898e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, 0.01984733, 0, 0)
 
 [node name="magazine_collision1" type="CollisionShape3D" parent="." unique_id=962875836]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.040138245, 0.00015258789, 0.054360032)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.030138245, 0.00015258789, 0.054360032)
 shape = SubResource("BoxShape3D_plrnn")
 
 [node name="magazine_collision2" type="CollisionShape3D" parent="." unique_id=1326991107]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.040138245, 0.00015258789, -0.054430254)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.030138245, 0.00015258789, -0.054430254)
 shape = SubResource("BoxShape3D_plrnn")
 
 [node name="magazine_collision3" type="CollisionShape3D" parent="." unique_id=1246676144]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.040067077, -0.00024414063, 0.000119924545)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.030067077, -0.00024414063, 0.000119924545)
 shape = SubResource("BoxShape3D_bqubg")
 
 [node name="magazine_collision4" type="CollisionShape3D" parent="." unique_id=1310040776]

@@ -50,6 +50,7 @@ size = Vector3(0.1761533, 0.050323486, 0.16047859)
 
 [node name="Robot" type="AnimatableBody3D" unique_id=1181725133]
 sync_to_physics = false
+collision_layer = 5
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.024931118, 0)
 physics_material_override = SubResource("PhysicsMaterial_ha6ay")
 script = ExtResource("1_h344o")
