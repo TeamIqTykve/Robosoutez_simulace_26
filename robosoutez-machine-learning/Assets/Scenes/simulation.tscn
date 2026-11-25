@@ -16,14 +16,14 @@
 [ext_resource type="PackedScene" uid="uid://8ub38snakfrd" path="res://Assets/Scenes/Blocks/dom_BR.tscn" id="12_n4hom"]
 [ext_resource type="PackedScene" uid="uid://bkr0v3e4f5nr0" path="res://Assets/Scenes/Blocks/dom_BB.tscn" id="13_g1j1d"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_2qk1o"]
-size = Vector3(1.6738281, 0.05102539, 2.2432556)
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(1.4416, 0.05, 1.9848)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_sxity"]
-size = Vector3(0.07162465, 0.106201, 2.11597)
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_side"]
+size = Vector3(0.1, 0.25, 1.9848)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_v1k6f"]
-size = Vector3(1.57086, 0.103394, 0.08410663)
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_end"]
+size = Vector3(1.4416, 0.25, 0.1)
 
 [node name="Simulation" type="Node3D" unique_id=1899262179]
 
@@ -82,7 +82,7 @@ motor/max_impulse = 10.0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.062, 0, 0)
 
 [node name="Domino" type="Node3D" parent="." unique_id=748451743]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.0519273, 0)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0.037, 0)
 
 [node name="dom_GG" parent="Domino" unique_id=1956858656 instance=ExtResource("5_2qk1o")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -0.488, 0, -0.14)
@@ -109,7 +109,7 @@ transform = Transform3D(1, 0, 1.4210855e-14, 0, 1, 0, -1.4210855e-14, 0, 1, 0.3,
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0.488, 0, -0.14)
 
 [node name="dom_GR2" parent="Domino" unique_id=1983671369 instance=ExtResource("9_ra01r")]
-transform = Transform3D(-1, 0, 1.509958e-07, 0, 1, 0, -1.509958e-07, 0, -1, -0.1, -0.003, -0.708)
+transform = Transform3D(-1, 0, 1.509958e-07, 0, 1, 0, -1.509958e-07, 0, -1, -0.1, 0, -0.708)
 
 [node name="dom_RR" parent="Domino" unique_id=1814299421 instance=ExtResource("10_mnrp6")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 0, 0.708)
@@ -134,27 +134,28 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0, -0.708)
 
 [node name="GameField" type="Node3D" parent="." unique_id=1832586518]
 
+[node name="Floor" type="StaticBody3D" parent="." unique_id=888304159]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=891546872]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0016, 0)
+shape = SubResource("BoxShape3D_floor")
+
 [node name="Wall" type="StaticBody3D" parent="." unique_id=888304158]
-transform = Transform3D(0.825, 0, 0, 0, 0.825, 0, 0, 0, 0.825, 0, 0.004885055, 0)
 collision_layer = 9
 collision_mask = 9
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall" unique_id=891546871]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005, 0, 0.008)
-shape = SubResource("BoxShape3D_2qk1o")
+[node name="WallPlusX" type="CollisionShape3D" parent="Wall" unique_id=1465188663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.672, 0.125, 0)
+shape = SubResource("BoxShape3D_wall_side")
 
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="Wall" unique_id=1465188663]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.79042417, -0.050903313, -0.0100259)
-shape = SubResource("BoxShape3D_sxity")
+[node name="WallMinusX" type="CollisionShape3D" parent="Wall" unique_id=921774396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.672, 0.125, 0)
+shape = SubResource("BoxShape3D_wall_side")
 
-[node name="CollisionShape3D3" type="CollisionShape3D" parent="Wall" unique_id=921774396]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7888674, -0.050903313, -0.0134087)
-shape = SubResource("BoxShape3D_sxity")
+[node name="WallPlusZ" type="CollisionShape3D" parent="Wall" unique_id=1363655600]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, 0.89)
+shape = SubResource("BoxShape3D_wall_end")
 
-[node name="CollisionShape3D4" type="CollisionShape3D" parent="Wall" unique_id=1363655600]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0257845, -0.049743704, 1.0602795)
-shape = SubResource("BoxShape3D_v1k6f")
-
-[node name="CollisionShape3D5" type="CollisionShape3D" parent="Wall" unique_id=1642369531]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0393155, -0.049743704, -1.0610275)
-shape = SubResource("BoxShape3D_v1k6f")
+[node name="WallMinusZ" type="CollisionShape3D" parent="Wall" unique_id=1642369531]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, -0.89)
+shape = SubResource("BoxShape3D_wall_end")

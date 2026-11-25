@@ -17,6 +17,15 @@ public partial class RobotSim : Node3D
 	[Export] public float DefaultForwardVel = 500f;
 	[Export] public float DefaultObstacleDistance = 150f;
 
+	/// <summary>Kolizní vrstva (bitová maska) mantinelů hrací desky. Robot přes ni neprojede.</summary>
+	[Export(PropertyHint.Layers3DPhysics)] public uint BoardWallMask = 8;
+	/// <summary>Kolik iterací půlení intervalu se použije, když pohyb narazí do mantinelu.</summary>
+	[Export] public int WallSearchIterations = 8;
+	/// <summary>Kolizní vrstva domino kostek.</summary>
+	[Export(PropertyHint.Layers3DPhysics)] public uint DominoMask = 2;
+	/// <summary>Kostka blíž k mantinelu (nebo k jiné zaklíněné kostce) než tato vzdálenost [m] je považována za zaklíněnou.</summary>
+	[Export] public float PinnedMargin = 0.004f;
+
 	// Stavy dle main.py
 	public int IsCW { get; private set; } = 1;
 	public int IsCCW { get; private set; } = 0;
@@ -40,6 +49,29 @@ public partial class RobotSim : Node3D
 	// Sledování plynulého otáčení při držení A / D
 	private float _heldRotateDeg = 0f;
 	private float _heldRotateSign = 0f;
+
+	// Kolizní tvary robota (tělo, ruce, zásobník) pro kontrolu průniku s mantinely
+	private sealed class RobotShape
+	{
+		public CollisionShape3D Node;
+		public Shape3D QueryShape;
+	}
+	private readonly List<RobotShape> _robotShapes = new();
+	private readonly PhysicsShapeQueryParameters3D _wallQuery = new();
+	private bool _warnedStartOverlap = false;
+
+	// Domino kostky – robot nesmí kostku opřenou o mantinel "rozmáčknout" (fyzika by ji vystřelila ven)
+	private sealed class DominoInfo
+	{
+		public RigidBody3D Body;
+		public CollisionShape3D Node;
+		public BoxShape3D InflatedShape;
+	}
+	private readonly List<DominoInfo> _dominoes = new();
+	private readonly HashSet<Rid> _pinnedDominoes = new();
+	private readonly Godot.Collections.Array<Rid> _nonPinnedDominoRids = new();
+	private readonly PhysicsShapeQueryParameters3D _squeezeQuery = new();
+	private const float SqueezeTolerance = 0.00001f;
 
 	public sealed class SimStep
 	{
@@ -77,6 +109,14 @@ public partial class RobotSim : Node3D
 	public override void _Ready()
 	{
 		ApplyInstantPoseFromFlags();
+		CollectRobotShapes(RobotPivot ?? this);
+		_wallQuery.CollisionMask = BoardWallMask;
+		_wallQuery.CollideWithBodies = true;
+		_wallQuery.CollideWithAreas = false;
+		_wallQuery.Margin = 0f;
+		CollectDominoes(GetTree().Root);
+		_squeezeQuery.CollisionMask = DominoMask;
+		_squeezeQuery.Margin = 0f;
 		GD.Print("Ovládání: W/S = vpřed/vzad (okamžité zastavení), A/D = plynulé otáčení podle doby držení, J/L/K = ruce (CCW/CW/neutrál), Z/X = magazín (vlevo/vpravo), U = unload_blocks, O = run_until_obstacle, Space = stop | P = vypsat, Enter = přehrát, C = vymazat");
 	}
 
@@ -109,6 +149,7 @@ public partial class RobotSim : Node3D
 	public override void _PhysicsProcess(double delta)
 	{
 		float dt = (float)delta;
+		UpdatePinnedDominoes();
 
 		if (!_isPlayingSequence)
 		{
@@ -160,8 +201,7 @@ public partial class RobotSim : Node3D
 			float sign = dPressed ? -1f : 1f; // V Godotu kladné Y otáčí doleva (A), záporné doprava (D)
 			float stepDeg = TurnSpeedDegPerSec * dt;
 
-			Node3D targetNode = RobotPivot ?? this;
-			targetNode.RotateY(Mathf.DegToRad(stepDeg * sign));
+			stepDeg *= TryRotatePivot(stepDeg * sign);
 
 			if (_heldRotateSign != sign && MathF.Abs(_heldRotateDeg) > 0.01f)
 			{
@@ -198,10 +238,11 @@ public partial class RobotSim : Node3D
 		{
 			float stepDeg = TurnSpeedDegPerSec * dt;
 			float appliedDeg = MathF.Min(stepDeg, _remainingAngleDeg);
-			targetNode.RotateY(Mathf.DegToRad(appliedDeg * _rotateSign));
+			float done = TryRotatePivot(appliedDeg * _rotateSign);
 			_remainingAngleDeg -= appliedDeg;
 
-			if (_remainingAngleDeg <= 0.0001f)
+			// Zablokováno mantinelem – otáčení ukončíme
+			if (done < 1f || _remainingAngleDeg <= 0.0001f)
 			{
 				_remainingAngleDeg = 0f;
 				_driveMode = DriveMode.Idle;
@@ -211,6 +252,7 @@ public partial class RobotSim : Node3D
 
 		if (_driveMode == DriveMode.UntilObstacle)
 		{
+			_simulatedObstacleDistMm = MeasureObstacleDistanceMm(targetNode);
 			if (_simulatedObstacleDistMm <= _obstacleDistanceMm)
 			{
 				TriggerStop(record: false);
@@ -240,14 +282,214 @@ public partial class RobotSim : Node3D
 		Vector3 forwardDir = targetNode.GlobalTransform.Basis.X.Normalized();
 		Vector3 displacement = forwardDir * (_currentSpeed * BoardMoveScale) * dt;
 
-		if (targetNode is StaticBody3D body3D)
+		Vector3 start = targetNode.GlobalPosition;
+		float travelled = MoveBlockedByWalls(t => targetNode.GlobalPosition = start + displacement * t);
+
+		// Robot narazil do mantinelu – zastavíme jízdu (ruční W/S se znovu rozjede při držení klávesy)
+		if (travelled < 1f && _driveMode != DriveMode.Forward && _driveMode != DriveMode.ReverseUnload)
 		{
-			body3D.MoveAndCollide(displacement);
+			TriggerStop(record: false);
 		}
-		else
+	}
+
+	// --- Kolize robota s mantinely hrací desky ---
+
+	private void CollectRobotShapes(Node root)
+	{
+		_robotShapes.Clear();
+		var stack = new Stack<Node>();
+		stack.Push(root);
+		while (stack.Count > 0)
 		{
-			targetNode.GlobalPosition += displacement;
+			Node n = stack.Pop();
+			foreach (Node child in n.GetChildren()) stack.Push(child);
+
+			if (n is not CollisionShape3D cs || cs.Shape == null || cs.Disabled) continue;
+			if (cs.GetParent() is not CollisionObject3D) continue;
+
+			// Dotazy do fyziky nepodporují škálované tvary → škálu "zapečeme" do kopie tvaru
+			Vector3 scale = cs.GlobalTransform.Basis.Scale.Abs();
+			Shape3D query = cs.Shape;
+			if (cs.Shape is BoxShape3D box)
+			{
+				query = new BoxShape3D { Size = box.Size * scale };
+			}
+			else if (!scale.IsEqualApprox(Vector3.One))
+			{
+				GD.PushWarning($"[SIM] Tvar {cs.GetPath()} je škálovaný a není BoxShape3D – kontrola mantinelů může být nepřesná.");
+			}
+			_robotShapes.Add(new RobotShape { Node = cs, QueryShape = query });
 		}
+		GD.Print($"[SIM] Kontrola mantinelů: {_robotShapes.Count} kolizních tvarů robota.");
+	}
+
+	private bool RobotOverlapsWalls() => _robotShapes.Exists(ShapeOverlapsWalls);
+
+	private bool ShapeOverlapsWalls(RobotShape rs)
+	{
+		if (!rs.Node.IsInsideTree() || rs.Node.Disabled) return false;
+		Transform3D gt = rs.Node.GlobalTransform;
+		_wallQuery.Shape = rs.QueryShape;
+		_wallQuery.Transform = new Transform3D(gt.Basis.Orthonormalized(), gt.Origin);
+		return GetWorld3D().DirectSpaceState.IntersectShape(_wallQuery, 1).Count > 0;
+	}
+
+	/// <summary>
+	/// Provede pohyb (apply(t), t∈[0,1]) tak, aby robot neprošel mantinelem.
+	/// Vrací, jaký podíl pohybu se skutečně provedl.
+	/// </summary>
+	private float MoveBlockedByWalls(Action<float> apply)
+	{
+		if (_robotShapes.Count == 0) { apply(1f); return 1f; }
+
+		apply(0f);
+		// Pokud robot už v mantinelu stojí (např. špatná startovní pozice), pustíme ho ven
+		bool startInWall = RobotOverlapsWalls();
+		if (startInWall && !_warnedStartOverlap)
+		{
+			GD.PushWarning("[SIM] Robot je v kolizi s mantinelem – pohyb nebude blokován, dokud se nedostane ven.");
+			_warnedStartOverlap = true;
+		}
+		float startSqueeze = SqueezeDepth();
+
+		bool Allowed() =>
+			(startInWall || !RobotOverlapsWalls()) &&
+			SqueezeDepth() <= startSqueeze + SqueezeTolerance;
+
+		apply(1f);
+		if (Allowed()) return 1f;
+
+		// Půlení intervalu – najdeme nejdelší možný posun bez průniku
+		float lo = 0f, hi = 1f;
+		for (int i = 0; i < WallSearchIterations; i++)
+		{
+			float mid = 0.5f * (lo + hi);
+			apply(mid);
+			if (Allowed()) lo = mid; else hi = mid;
+		}
+		apply(lo);
+		return lo;
+	}
+
+	private void CollectDominoes(Node root)
+	{
+		_dominoes.Clear();
+		var stack = new Stack<Node>();
+		stack.Push(root);
+		while (stack.Count > 0)
+		{
+			Node n = stack.Pop();
+			foreach (Node child in n.GetChildren()) stack.Push(child);
+			if (n is not RigidBody3D body || (body.CollisionLayer & DominoMask) == 0) continue;
+
+			foreach (Node child in body.GetChildren())
+			{
+				if (child is CollisionShape3D cs && cs.Shape is BoxShape3D box)
+				{
+					Vector3 size = box.Size * cs.GlobalTransform.Basis.Scale.Abs();
+					_dominoes.Add(new DominoInfo
+					{
+						Body = body,
+						Node = cs,
+						InflatedShape = new BoxShape3D { Size = size + Vector3.One * (2f * PinnedMargin) }
+					});
+				}
+			}
+		}
+		GD.Print($"[SIM] Nalezeno {_dominoes.Count} domino kostek.");
+	}
+
+	/// <summary>Najde kostky opřené o mantinel – přímo, nebo přes řetěz dalších kostek.</summary>
+	private void UpdatePinnedDominoes()
+	{
+		_pinnedDominoes.Clear();
+		_nonPinnedDominoRids.Clear();
+		if (_dominoes.Count == 0) return;
+
+		var space = GetWorld3D().DirectSpaceState;
+		var q = new PhysicsShapeQueryParameters3D { Margin = 0f, CollisionMask = BoardWallMask };
+
+		foreach (DominoInfo d in _dominoes)
+		{
+			if (!d.Node.IsInsideTree()) continue;
+			Transform3D gt = d.Node.GlobalTransform;
+			q.Shape = d.InflatedShape;
+			q.Transform = new Transform3D(gt.Basis.Orthonormalized(), gt.Origin);
+			if (space.IntersectShape(q, 1).Count > 0) _pinnedDominoes.Add(d.Body.GetRid());
+		}
+
+		// Řetězení: kostka dotýkající se zaklíněné kostky je také zaklíněná
+		q.CollisionMask = DominoMask;
+		bool changed = _pinnedDominoes.Count > 0;
+		while (changed)
+		{
+			changed = false;
+			foreach (DominoInfo d in _dominoes)
+			{
+				Rid rid = d.Body.GetRid();
+				if (_pinnedDominoes.Contains(rid) || !d.Node.IsInsideTree()) continue;
+				Transform3D gt = d.Node.GlobalTransform;
+				q.Shape = d.InflatedShape;
+				q.Transform = new Transform3D(gt.Basis.Orthonormalized(), gt.Origin);
+				q.Exclude = new Godot.Collections.Array<Rid> { rid };
+				foreach (var hit in space.IntersectShape(q, 8))
+				{
+					if (_pinnedDominoes.Contains((Rid)hit["rid"]))
+					{
+						_pinnedDominoes.Add(rid);
+						changed = true;
+						break;
+					}
+				}
+			}
+		}
+
+		foreach (DominoInfo d in _dominoes)
+		{
+			Rid rid = d.Body.GetRid();
+			if (!_pinnedDominoes.Contains(rid)) _nonPinnedDominoRids.Add(rid);
+		}
+		_squeezeQuery.Exclude = _nonPinnedDominoRids;
+	}
+
+	/// <summary>Součet průniků robota do zaklíněných kostek [m].</summary>
+	private float SqueezeDepth()
+	{
+		if (_pinnedDominoes.Count == 0) return 0f;
+		var space = GetWorld3D().DirectSpaceState;
+		float total = 0f;
+		foreach (RobotShape rs in _robotShapes)
+		{
+			if (!rs.Node.IsInsideTree() || rs.Node.Disabled) continue;
+			Transform3D gt = rs.Node.GlobalTransform;
+			_squeezeQuery.Shape = rs.QueryShape;
+			_squeezeQuery.Transform = new Transform3D(gt.Basis.Orthonormalized(), gt.Origin);
+			var pts = space.CollideShape(_squeezeQuery, 8);
+			float maxDepth = 0f;
+			for (int i = 0; i + 1 < pts.Count; i += 2)
+				maxDepth = MathF.Max(maxDepth, (pts[i] - pts[i + 1]).Length());
+			total += maxDepth;
+		}
+		return total;
+	}
+
+	private float TryRotatePivot(float deg)
+	{
+		Node3D targetNode = RobotPivot ?? this;
+		Basis startBasis = targetNode.GlobalBasis;
+		return MoveBlockedByWalls(t =>
+			targetNode.GlobalBasis = new Basis(Vector3.Up, Mathf.DegToRad(deg * t)) * startBasis);
+	}
+
+	private float MeasureObstacleDistanceMm(Node3D targetNode)
+	{
+		Vector3 forward = targetNode.GlobalTransform.Basis.X.Normalized();
+		Vector3 from = targetNode.GlobalPosition;
+		var ray = PhysicsRayQueryParameters3D.Create(from, from + forward * 3f, BoardWallMask);
+		var hit = GetWorld3D().DirectSpaceState.IntersectRay(ray);
+		if (hit.Count == 0) return 1000f;
+		// Vzdálenost od přední hrany robota by závisela na senzoru; měříme od středu otáčení
+		return ((Vector3)hit["position"] - from).Length() / BoardMoveScale;
 	}
 
 	// --- Funkce odpovídající main.py ---
@@ -348,25 +590,21 @@ public partial class RobotSim : Node3D
 		float maxStepRad = Mathf.DegToRad(ArmMoveSpeedDegPerSec) * dt;
 		bool handsReachedTarget = true;
 
-		if (HandL != null)
+		foreach (StaticBody3D hand in new[] { HandL, HandR })
 		{
-			float nextY = Mathf.MoveToward(HandL.Rotation.Y, targetRad, maxStepRad);
-			HandL.Rotation = new Vector3(HandL.Rotation.X, nextY, HandL.Rotation.Z);
-			if (MathF.Abs(nextY - targetRad) > 0.001f) handsReachedTarget = false;
-		}
-
-		if (HandR != null)
-		{
-			float nextY = Mathf.MoveToward(HandR.Rotation.Y, targetRad, maxStepRad);
-			HandR.Rotation = new Vector3(HandR.Rotation.X, nextY, HandR.Rotation.Z);
-			if (MathF.Abs(nextY - targetRad) > 0.001f) handsReachedTarget = false;
+			if (hand == null) continue;
+			float startY = hand.Rotation.Y;
+			float nextY = Mathf.MoveToward(startY, targetRad, maxStepRad);
+			MoveBlockedByWalls(t => hand.Rotation = new Vector3(hand.Rotation.X, Mathf.Lerp(startY, nextY, t), hand.Rotation.Z));
+			if (MathF.Abs(hand.Rotation.Y - targetRad) > 0.001f) handsReachedTarget = false;
 		}
 
 		if (Magazine != null && handsReachedTarget)
 		{
 			float clampedTargetZ = Mathf.Clamp(_targetMagazineZ, -0.032f, 0.032f);
-			float nextZ = Mathf.MoveToward(Magazine.Position.Z, clampedTargetZ, MagazineMoveSpeedPerSec * dt);
-			Magazine.Position = new Vector3(Magazine.Position.X, Magazine.Position.Y, nextZ);
+			float startZ = Magazine.Position.Z;
+			float nextZ = Mathf.MoveToward(startZ, clampedTargetZ, MagazineMoveSpeedPerSec * dt);
+			MoveBlockedByWalls(t => Magazine.Position = new Vector3(Magazine.Position.X, Magazine.Position.Y, Mathf.Lerp(startZ, nextZ, t)));
 		}
 	}
 

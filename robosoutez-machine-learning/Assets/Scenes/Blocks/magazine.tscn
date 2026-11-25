@@ -11,7 +11,8 @@ size = Vector3(0.08154297, 0.04925537, 0.017730713)
 [sub_resource type="BoxShape3D" id="BoxShape3D_tc0ol"]
 size = Vector3(0.0028381348, 0.0501709, 0.11135864)
 
-[node name="magazine" type="StaticBody3D" unique_id=1477730004]
+[node name="magazine" type="AnimatableBody3D" unique_id=1477730004]
+sync_to_physics = false
 
 [node name="magazine_model" parent="." unique_id=2055682990 instance=ExtResource("1_k532p")]
 transform = Transform3D(-4.371139e-08, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, 0, 0, 0)
